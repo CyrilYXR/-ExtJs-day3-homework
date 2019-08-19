@@ -1,0 +1,174 @@
+<!DOCTYPE html
+    PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <title>toolbar</title>
+
+    <script type="text/javascript" src="../ext/ext-base.js"></script>
+    <script type="text/javascript" src="../ext/ext-all.js"></script>
+    <link rel="stylesheet" type="text/css" href="../ext/ext-all.css" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <script type="text/javascript">
+        Ext.onReady(function () {
+
+
+            var toolbar = new Ext.Toolbar({
+                items: [{
+                        text: 'Edit',
+                        xtype: 'splitbutton',
+                        menu: [{
+                            text: 'Reset',
+                            listeners: {
+                                'click': function () {
+                                    Ext.getCmp('htmlEditor').reset();
+                                }
+                            }
+                        }]
+                    },
+                    '-',
+                    {
+                        text: 'Insert',
+                        xtype: 'splitbutton',
+                        menu: [{
+                            id: 'table-btn',
+                            text: 'Table',
+                            // handler: showTable
+                        }]
+                    }
+                ]
+            })
+
+            var htmlEditor = new Ext.form.HtmlEditor({
+                fieldLabel: 'Reply Content',
+                id: 'htmlEditor',
+                enableAlignments: true,
+                enableColors: true,
+                enableFont: true,
+                enableFontSize: true,
+                enableFormat: true,
+                enableLinks: true,
+                enableLists: true,
+                enableSourceEdit: true,
+                width: 700,
+                listeners: {
+                    'sync': function (sb, content) {
+                        // Ext.getCmp('htmlEditor').getValue();
+                        if (Ext.isEmpty(content)) {
+                            Ext.getCmp('reply').disable();
+                        } else {
+                            Ext.getCmp('reply').enable();
+                        }
+                    },
+                }
+            })
+
+            var history = [];
+            var formPanel = new Ext.FormPanel({
+                width: 900,
+                unstyled: true,
+                labelAlign: 'right',
+                items: [
+                    htmlEditor,
+                ],
+                buttons: [{
+                    text: 'reply',
+                    id: 'reply',
+                    disabled: true,
+                    handler: function () {
+                        var runner = new Ext.util.TaskRunner();
+                        var count = 0;
+                        Ext.MessageBox.progress('Replaying', '');
+                        var task = {
+                            run: function () {
+                                if (count > 3) {
+                                    Ext.MessageBox.hide()
+                                    var historyObject = {context: Ext.getCmp('htmlEditor').getValue(), time:new Date};
+                                    history.push(historyObject);
+                                    console.log(history);
+                                    Ext.getCmp('htmlEditor').reset()
+                                    Ext.getCmp('reply').disable()
+                                    Ext.Msg.alert('', 'reply success')
+                                    return false
+                                }
+                                Ext.MessageBox.updateProgress(count / 3, Math.floor(
+                                    count / 3 * 100) + '%');
+                                count++
+                            },
+                            interval: 100
+                        }
+                        runner.start(task);
+                    }
+                }]
+            })
+
+            var contextmenu = new Ext.menu.Menu({
+                id: 'contextmenu',
+                items: [{
+                    text: 'Reset',
+                    handler: function () {
+                        Ext.getCmp('htmlEditor').reset();
+                    }
+                }, {
+                    text: 'Table',
+                    id: 'table-btn'
+                }]
+            });
+
+            var panel = new Ext.Panel({
+                id: 'panel',
+                // contextMenu: contextmenu,
+                items: [toolbar, formPanel, {
+                    xtype: 'panel',
+                    title: 'table',
+                    id: 'tablePanel'
+                }],
+            });
+
+            Ext.get(document).on('contextmenu', function (e) {
+                e.preventDefault();
+                contextmenu.showAt(e.getXY());
+            });
+
+            var baseWindow = new Ext.Window({
+                renderTo: document.body,
+                layout: 'fit',
+                title: 'reply editor',
+                closable: true,
+                maximizable: true,
+                minimizable: true,
+                plain: true,
+                items: [panel]
+            })
+            baseWindow.show();
+            baseWindow.maximize();
+
+            
+            var data = {
+                options: history
+            };
+
+            var xtemplate = new Ext.XTemplate(
+                '<table>',
+                '<tpl for="options">',
+                    '<tr>',
+                    '<td>You reply <b>{context}</b> at {time}</td>',
+                    '</tr>',
+                '</tpl>',
+                '</table>'
+            );
+            
+            var showTable = function(){
+                xtemplate.append(panel.body, data);
+            }
+
+            Ext.getCmp('table-btn').on('click',showTable)
+        })
+    </script>
+</head>
+
+<body>
+
+</body>
+
+</html>
